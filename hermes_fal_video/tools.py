@@ -64,9 +64,10 @@ def _models_description(families: dict[str, Family]) -> str:
 
 
 def _union(families: dict[str, Family], attribute: str) -> list[str]:
+    """Every value any family accepts, lowercased; payloads restore each family's spelling."""
     values: list[str] = []
     for family in families.values():
-        values += [v for v in getattr(family, attribute) if v not in values]
+        values += [v.lower() for v in getattr(family, attribute) if v.lower() not in values]
     return values
 
 
@@ -95,8 +96,13 @@ def _schema(operation: str) -> dict[str, Any]:
             "items": {"type": "string"},
             "description": "HTTPS URLs or local paths of reference images (png, jpg, webp, gif).",
         }
-        if operation == "reference":
-            required.append("reference_image_urls")
+    if any(f.max_video_references for f in families.values()):
+        properties["reference_video_urls"] = {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "HTTPS URLs or local paths of reference videos for motion, style "
+                           "or subjects (mp4, mov, webm, m4v, mkv); not every model takes them.",
+        }
     if resolutions := _union(families, "resolutions"):
         properties["resolution"] = {"type": "string", "enum": resolutions,
                                     "description": "Output resolution; varies by model."}
@@ -113,7 +119,7 @@ def _schema(operation: str) -> dict[str, Any]:
         }
     if any(f.seed for f in families.values()):
         properties["seed"] = {"type": "integer", "description": "Seed for repeatable output."}
-    if any(f.audio_toggle for f in families.values()):
+    if any(f.audio_key for f in families.values()):
         properties["audio"] = {"type": "boolean", "description": "Generate a soundtrack."}
     if any(f.keep_audio for f in families.values()):
         properties["keep_audio"] = {"type": "boolean",
@@ -121,7 +127,8 @@ def _schema(operation: str) -> dict[str, Any]:
     verbs = {
         "edit": "Edit an existing video with a prompt using FAL.",
         "extend": "Continue an existing video past its last frame using FAL.",
-        "reference": "Make a video that features the subjects in reference images using FAL.",
+        "reference": "Make a video that features the subjects in reference images or videos "
+                     "using FAL.",
     }
     return {
         "name": TOOL_NAMES[operation],
@@ -152,13 +159,16 @@ def make_handler(operation: str, get_config: ConfigGetter, make_client=_make_cli
         timeout = _int_setting(get_config, "timeout_seconds", 900, 60, 3600)
 
         refs = args.get("reference_image_urls") or []
-        if not isinstance(refs, list):
-            return _error("reference_image_urls must be a list.", "invalid_argument", model)
+        video_refs = args.get("reference_video_urls") or []
+        for name, value in (("reference_image_urls", refs), ("reference_video_urls", video_refs)):
+            if not isinstance(value, list):
+                return _error(f"{name} must be a list.", "invalid_argument", model)
         try:
             request = Request(
                 prompt=args.get("prompt") or "",
                 video_url=args.get("video_url") or None,
                 reference_urls=tuple(refs),
+                video_reference_urls=tuple(video_refs),
                 resolution=args.get("resolution"), aspect_ratio=args.get("aspect_ratio"),
                 duration=args.get("duration"), seed=args.get("seed"), audio=args.get("audio"),
                 keep_audio=args.get("keep_audio"),
@@ -167,9 +177,10 @@ def make_handler(operation: str, get_config: ConfigGetter, make_client=_make_cli
             build_payload(operation, model, family, request)
             video = (media.prepare(request.video_url, "video", client, max_bytes)
                      if request.video_url else None)
-            uploaded = tuple(media.prepare(ref, "image", client, max_bytes) for ref in refs)
-            payload = build_payload(operation, model, family,
-                                    replace(request, video_url=video, reference_urls=uploaded))
+            images = tuple(media.prepare(ref, "image", client, max_bytes) for ref in refs)
+            videos = tuple(media.prepare(ref, "video", client, max_bytes) for ref in video_refs)
+            payload = build_payload(operation, model, family, replace(
+                request, video_url=video, reference_urls=images, video_reference_urls=videos))
         except (InvalidRequest, media.MediaError) as exc:
             return _error(str(exc), "invalid_argument", model)
         except Exception as exc:

@@ -44,9 +44,10 @@ HTTPS URLs are passed through. Each call takes one to ten minutes.
 
 | Goal | Tool | Model |
 | --- | --- | --- |
-| Video from reference photos | `fal_video_from_references` | `seedance-2.0` (default, audio, up to 9 refs), `happy-horse` (1080p), `grok-imagine` (fast, up to 7 refs) |
-| Restyle or change a clip | `fal_video_edit` | `grok-imagine` (default), `happy-horse` (reference-guided, `keep_audio`) |
-| Make a clip longer | `fal_video_extend` | `grok-imagine`, 2-10 s per call |
+| Video from reference photos or clips | `fal_video_from_references` | `h3-max` (default), `kling-v4` (up to 30 s), `seedance-2.5` (most refs, audio), `wan-3.0` (audio), `vidu-q4`, `gemini-omni-flash` (4k) |
+| Restyle or change a clip | `fal_video_edit` | `kling-v4` (default, reference-guided), `gemini-omni-flash` (4k), `flux-3` (fast), `happy-horse` (`keep_audio`) |
+| Make a clip longer | `fal_video_extend` | `h3-max` (default, 1-15 s), `flux-3` (up to 20 s, audio), `gemini-omni-flash` (4k) |
+| Cheap draft first | any | `-flash`, `-turbo`, `-fast` or `flux-3-draft` variants |
 | First frame | `image_generate` | any |
 | Animate one still | `video_generate` | any |
 
@@ -58,11 +59,13 @@ HTTPS URLs are passed through. Each call takes one to ten minutes.
    inspect it, fix framing or text with another `image_generate` call that
    passes it as `image_url`, then animate it with `video_generate`.
 3. Reference photos of a subject: call `fal_video_from_references` with the
-   photos in `reference_image_urls` and a prompt that names what each one is
-   ("the woman in image 1 hands the bottle in image 2 to ...").
-4. To change a clip, call `fal_video_edit` with its `video_url`. Use
-   `happy-horse` with `reference_image_urls` when the change must match a
-   specific look, and `keep_audio: true` to keep the original sound.
+   photos in `reference_image_urls`, and any clips whose motion or style
+   should carry over in `reference_video_urls`. Name each one in the prompt
+   as `@Image1`, `@Image2`, `@Video1` ("@Image1 hands the bottle in @Image2
+   to ...").
+4. To change a clip, call `fal_video_edit` with its `video_url`. Add
+   `reference_image_urls` when the change must match a specific look, and
+   use `happy-horse` with `keep_audio: true` to keep the original sound.
 5. To lengthen a clip, call `fal_video_extend` with the latest `video` URL and
    a prompt describing only what happens next. Repeat for more length; each
    call continues the previous output.
@@ -75,10 +78,11 @@ HTTPS URLs are passed through. Each call takes one to ten minutes.
 
 - Error messages list the values a model accepts. Read them and retry with an
   allowed value instead of switching tools.
-- Only `seedance-2.0` takes `audio`; `happy-horse` and `grok-imagine`
-  generate their own soundtrack.
-- Seedance and Happy Horse reference clips are slow and priced per second;
-  confirm length before a long request.
+- `audio` only works on models that expose a switch (Seedance, Wan 3.0,
+  FLUX 3 extend, PixVerse, Vidu); the others decide on their own.
+- Long clips (Kling and Wan up to 30 s, Seedance 2.5 up to 30 s) are slow
+  and priced per second; confirm length before a long request, and try a
+  `-flash`/`-turbo`/`-fast` variant first.
 - Local files must have a media extension and are uploaded to FAL storage.
   Do not pass anything the user would not want leaving the machine.
 - A timeout error includes the FAL request ID; tell the user rather than

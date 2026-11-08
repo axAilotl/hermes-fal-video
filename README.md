@@ -9,11 +9,47 @@ providers and deliberately leaves out edit and extend, because those
 operations differ too much between backends for one tool. This plugin adds
 them for FAL as separate tools, the same way Hermes ships xAI's edit/extend.
 
-| Tool | Models | What it does |
-| --- | --- | --- |
-| `fal_video_edit` | `grok-imagine` (default), `happy-horse` | Change an existing clip with a prompt; Happy Horse also takes up to 5 reference images and can keep the source audio. |
-| `fal_video_extend` | `grok-imagine` | Continue a clip for 2-10 s. |
-| `fal_video_from_references` | `seedance-2.0` (default), `happy-horse`, `grok-imagine` | New clip featuring the people/products in up to 9 (Grok: 7) reference images. |
+| Tool | What it does |
+| --- | --- |
+| `fal_video_edit` | Change an existing clip with a prompt, optionally guided by reference images or videos. |
+| `fal_video_extend` | Continue a clip past its last frame. |
+| `fal_video_from_references` | New clip featuring the people, products or motion in reference images and videos. |
+
+Models (checked against fal's catalog and published input schemas, November 2026):
+
+| Tool | `model` | FAL model | Notes |
+| --- | --- | --- | --- |
+| edit | `kling-v4` (default) | Kling 4.0 Video Edit | 720p/1080p, 3-30 s, up to 10 image + 4 video refs |
+| edit | `kling-v4-flash` | Kling 4.0 Flash | 720p, 3-20 s, cheaper |
+| edit | `gemini-omni-flash` | Gemini Omni Flash 1.2 | 360p-4k |
+| edit | `flux-3` | FLUX 3 Fast Edit | prompt only, fast |
+| edit | `grok-imagine` | Grok Imagine | up to 720p |
+| edit | `happy-horse` | Happy Horse | up to 5 image refs, `keep_audio` |
+| extend | `h3-max` (default) | MiniMax H3 Max | 1-15 s, up to 2K |
+| extend | `h3-max-turbo` | MiniMax H3 Max Turbo | faster H3 Max |
+| extend | `flux-3` | FLUX 3 Extend | 5-20 s or auto, up to 2160p, audio |
+| extend | `flux-3-draft` | FLUX 3 Extend Draft | cheap preview |
+| extend | `gemini-omni-flash` | Gemini Omni Flash 1.2 | 3-10 s, up to 4k |
+| extend | `pixverse-v6` | PixVerse V6 | 1-15 s, audio |
+| extend | `grok-imagine` | Grok Imagine | 2-10 s |
+| references | `h3-max` (default) | MiniMax H3 Max | 1-15 s, 9 image + 3 video refs |
+| references | `h3-max-turbo` | MiniMax H3 Max Turbo | faster H3 Max |
+| references | `h3` | MiniMax H3 | 5-15 s, up to 4K |
+| references | `kling-v4` | Kling 4.0 | 3-30 s, 10 image + 5 video refs |
+| references | `kling-v4-flash` | Kling 4.0 Flash | 720p, 3-20 s |
+| references | `seedance-2.5` | Seedance 2.5 | 4-30 s, 30 image + 10 video refs, audio |
+| references | `seedance-2.0` | Seedance 2.0 | 4-15 s, up to 4k, audio |
+| references | `seedance-2.0-fast` | Seedance 2.0 Fast | up to 720p |
+| references | `wan-3.0` | Wan 3.0 | 2-30 s, 10 image + 5 video refs, audio |
+| references | `wan-3.0-prime` | Wan 3.0 Prime | higher-quality Wan 3.0 |
+| references | `gemini-omni-flash` | Gemini Omni Flash 1.2 | 3-15 s, 16:9/9:16, up to 4k |
+| references | `vidu-q4` | Vidu Q4 | 3-16 s, 12 image refs, up to 4K |
+| references | `happy-horse` | Happy Horse 1.1 | 3-15 s, 9 image refs |
+| references | `grok-imagine` | Grok Imagine 1.5 | 1-15 s, 7 image refs |
+
+Each model's exact resolutions, aspect ratios and durations are in
+`hermes_fal_video/families.py`. Resolutions are matched case-insensitively,
+and `auto` and `adaptive` aspect ratios are treated as the same thing.
 
 The bundled `fal-video-pipeline` skill (`skill_view("hermes-fal-video:fal-video-pipeline")`)
 tells the agent when to use which tool and how to chain outputs.
@@ -48,7 +84,7 @@ Optional settings under `plugins.entries.hermes-fal-video.settings`:
 
 - **Validation first.** Every argument is checked against the chosen model
   before anything is uploaded or submitted. Errors list the accepted values
-  (for example `grok-imagine resolution must be one of: auto, 480p, 720p`).
+  (for example `kling-v4 resolution must be one of: 720p, 1080p`).
   The accepted values come from each endpoint's published FAL input schema.
 - **Local files.** HTTPS URLs are passed to FAL as-is. Local paths and
   `file://` URLs are uploaded to FAL storage, but only regular files whose
