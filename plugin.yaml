@@ -1,0 +1,30 @@
+name: hermes-fal-video
+version: 0.1.0
+description: "FAL video edit, extend, and reference-to-video tools for Hermes."
+author: axAilotl
+kind: standalone
+requires_hermes: ">=0.23.0"
+license: MIT
+homepage: https://github.com/axAilotl/hermes-fal-video
+tags: [media, video, fal]
+provides_tools:
+  - fal_video_edit
+  - fal_video_extend
+  - fal_video_from_references
+python_dependencies:
+  - "fal-client>=0.13.1,<0.16"
+requires_env:
+  - name: FAL_KEY
+    description: "FAL API key"
+    url: "https://fal.ai/dashboard/keys"
+    secret: true
+config_schema:
+  timeout_seconds:
+    type: int
+    default: 900
+    description: "How long to wait for one FAL job before cancelling it (60-3600)."
+  max_upload_mb:
+    type: int
+    default: 200
+    label: "Max upload (MB)"
+    description: "Largest local video or image uploaded to FAL storage."
