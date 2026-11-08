@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 VIDEO_SUFFIXES = frozenset({".mp4", ".mov", ".webm", ".m4v", ".mkv"})
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp", ".gif"})
@@ -22,7 +23,7 @@ def _local_path(source: str) -> Path | None:
             raise MediaError(f"Not a valid URL: {source}")
         return None
     if scheme == "file":
-        return Path(unquote(parsed.path))
+        return Path(url2pathname(parsed.path))  # also maps /C:/x to C:\x on Windows
     if scheme and len(scheme) > 1:  # a one-letter "scheme" is a Windows drive letter
         raise MediaError(
             f"Unsupported media source scheme '{scheme}:' (use https or a local path)."

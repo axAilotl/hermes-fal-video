@@ -78,3 +78,11 @@ def test_size_limits(fake_client, tmp_path) -> None:
     with pytest.raises(MediaError, match="over 1 MB"):
         prepare(str(big), "video", fake_client, MB)
     assert fake_client.uploads == []
+
+
+def test_file_url_with_escaped_characters(fake_client, tmp_path) -> None:
+    clip = tmp_path / "my clip.mov"
+    clip.write_bytes(b"\0")
+    assert "%20" in clip.as_uri()
+    assert prepare(clip.as_uri(), "video", fake_client, MB).endswith("/my clip.mov")
+    assert fake_client.uploads == [clip.resolve()]
