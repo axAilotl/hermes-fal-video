@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
@@ -31,7 +30,8 @@ def get_fal_key() -> str:
     try:
         value = get_secret(FAL_KEY_ENV, None)
     except UnscopedSecretError:
-        value = os.getenv(FAL_KEY_ENV)
+        # Ambient credentials may belong to a different multiplexed profile.
+        return ""
     return (value or "").strip()
 
 

@@ -71,6 +71,10 @@ Accept the dependency prompt (`fal-client`). The `fal_video` toolset is on by
 default once the plugin is enabled; its tools only appear to the model when
 `FAL_KEY` is set. Toggle it per platform in `hermes tools`.
 
+In multiplex mode, the active profile's secret scope must contain `FAL_KEY`.
+With no scope or no scoped key, the tools stay unavailable and requests return
+`auth_required`; they never borrow a key from the process environment.
+
 ## Configure
 
 Optional settings under `plugins.entries.hermes-fal-video.settings`:
